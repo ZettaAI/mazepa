@@ -1,4 +1,0 @@
-boto3==1.17.20
-click==7.1.2
-task-queue==2.8.5
-tenacity==7.0.0

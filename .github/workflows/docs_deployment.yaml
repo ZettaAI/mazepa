@@ -1,0 +1,44 @@
+name: Docs
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  SETUPTOOLS_ENABLE_FEATURES: legacy-editable
+
+jobs:
+  docs:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          lfs: 'false'
+          submodules: 'recursive'
+          ssh-key: ${{ secrets.git_ssh_key  }}
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9.0
+          architecture: x64
+          cache: 'pip'
+      - name: Install Python dependencies
+        run: pip install -e '.[modules, docs]'
+      - name: Build Docs
+        run: cd ./docs; make html
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: './docs/build/html'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@main
