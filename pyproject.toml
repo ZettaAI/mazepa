@@ -1,0 +1,111 @@
+[build-system]
+requires = [
+    "setuptools >= 44.6.0",
+    "setuptools < 64.0.0",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mazepa"
+description = "Lightweight distributed task scheduling."
+readme = "README.rst"
+authors = [{name = "Sergiy Popovych", email = "sergiy.popoviich@gmail.com"}]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+keywords = ["Distributed Computing"]
+license = {text = "MIT"}
+urls = {Homepage = "https://github.com/supersergiy/mazepa"}
+requires-python = ">= 3.7"
+dependencies = [
+    "attrs >= 21.3",
+    "typeguard >= 2.13.3",
+    "task-queue",
+    "boto3",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+docs = [
+    "piccolo_theme >= 0.11.1",
+    "sphinx-autodoc-typehints >= 1.19.0",
+    "sphinx-notfound-page >= 0.8.3",
+    "sphinx_copybutton >= 0.5.0",
+]
+test = [
+    "black == 21.9b0",
+    "click == 8.0.1", # for black to work
+    "pydocstyle == 6.1.1",
+    "flake8 == 4.0.1",
+    "mypy == 0.971",
+    "pytest == 7.1.1",
+    "pytest-cov == 3.0.0",
+    "pytest-mock == 3.8.2",
+    "isort == 5.10.1",
+    "pylint == 2.13.9",
+    "isort == 5.10.1",
+    "pre-commit == 2.19.0",
+]
+all = [
+    "mazepa[docs,test]",
+]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.black]
+line-length = 99
+target-version = ["py37", "py38","py39"]
+
+[tool.pylint.format]
+max-line-length = 99
+
+[tool.pylint.basic]
+good-names = '''ts,df,e,i,j,k,id,logger,n,on,tz,x,y,z,r,ex,ey,cv,s,f,v,fn'''
+
+[tool.pylint.message_control]
+disable = '''duplicate-code,C0330,cyclic-import,too-many-arguments,missing-docstring,too-few-public-methods,logging-fstring-interpolation'''
+extension-pkg-allow-list = [
+  "pymssql._mssql",
+]
+
+[tool.pylint.miscellaneous]
+notes = '''FIXME,XXX'''
+
+[tool.pylint.similarities]
+min-similarity-lines = 4
+ignore-comments = "yes"
+ignore-docstrings = "yes"
+ignore-imports = "yes"
+
+[tool.pylint.main]
+extension-pkg-whitelist="numpy,cc3d,fastremap"
+ignore-paths=["^docs/*"]
+
+[tool.pylint.options]
+generated-members="torch.*"
+
+[tool.pytest.ini_options]
+addopts = "-ra --cov=mazepa --cov-report=term-missing --strict-markers --ignore=.eggs --tb=short --junitxml=test-results.xml --cov-report=html --cov-report=xml"
+testpaths = ["tests"]
+norecursedirs = ".env .git .venv build dist"
+python_files = "test.py tests.py test_*.py *_test.py"
+
+[tool.mypy]
+    warn_unreachable = true
+    warn_unused_ignores = true
+    warn_redundant_casts = true
+    warn_unused_configs = true
+#incremental = false
+#disallow_untyped_defs = true
+#check_untyped_defs = true
+#strict_equality = true
+    implicit_reexport = true
+    no_implicit_optional = true
