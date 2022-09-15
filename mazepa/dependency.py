@@ -3,9 +3,10 @@ from typing import Optional, Iterable
 import attrs
 from typeguard import typechecked
 
+
 @typechecked
 @attrs.frozen
-class Await:
+class Dependency:
     job_ids: Optional[Iterable[str]] = None
     task_ids: Optional[Iterable[str]] = None
 

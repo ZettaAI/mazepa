@@ -1,7 +1,10 @@
-from typing import Callable, TypeVar, Generic, cast
-import uuid
+from __future__ import annotations
+
+from typing import Callable, TypeVar, Generic, cast, Any
+
 from typing_extensions import ParamSpec
 import attrs
+from . import id_generators
 
 R = TypeVar("R")  # The return type of the user's function
 P = ParamSpec("P")  # The parameters of the task
@@ -9,37 +12,70 @@ P = ParamSpec("P")  # The parameters of the task
 NOT_EXECUTED = object()
 
 
-class Task(Generic[P, R]):
+@attrs.mutable
+class TaskMaker(Generic[P, R]):
     """
     Wraps a function with to be executable by Mazepa scheduler.
     """
 
     fn: Callable[P, R]
-    id_: str = attrs.field(init=False, factory=lambda: str(uuid.uuid1))
-    callbacks: list[Callable] = attrs.field(factory=list)
-    result: NOT_EXECUTED
-
-    # tags: Iterable[str] = None
-    # cache_key_fn
-    # cache_expiration: datetime.timedelta = None
+    id_fn: Callable[[Callable, dict], str] = attrs.field(
+        init=False, default=id_generators.get_unique_id
+    )
+    tags: list[str] = attrs.field(factory=list)
     # max_retry: # Can use SQS approximateReceiveCount to explicitly fail the task
 
     def __call__(
-        self: "Task[P, R]",
+        self: "TaskMaker[P, R]",
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> R:
-        result = self.fn(*args, **kwargs)
-        for callback in self.callbacks:
-            callback(
-                task=self,
-                result=result,
-            )
+        return self.fn(*args, **kwargs)
+
+    def make_task(
+        self: "TaskMaker[P, R]",
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> Task[P, R]:
+        assert len(args) == 0
+        id_ = self.id_fn(self.fn, kwargs)
+        result = Task[P, R](
+            fn=self.fn,
+            kwargs=kwargs,
+            id_=id_,
+            tags=self.tags,
+        )
         return result
 
 
-def task(fn: Callable[P, R]) -> Task[P, R]:
+@attrs.mutable
+class Task(Generic[P, R]):
+    """
+    An executable task with ID and tags.
+    """
+
+    fn: Callable[P, R]
+    kwargs: dict
+    id_: str
+
+    callbacks: list[Callable] = attrs.field(factory=list)
+    result: Any = NOT_EXECUTED
+    tags: list[str] = attrs.field(factory=list)
+    # cache_expiration: datetime.timedelta = None
+    # max_retry: # Can use SQS approximateReceiveCount to explicitly fail the task
+
+    def __call__(self: "Task[P, R]") -> R:
+        self.result = self.fn(**self.kwargs)
+        for callback in self.callbacks:
+            callback(task=self)
+        return self.result
+
+
+def task_maker(
+    fn: Callable[P, R],
+) -> TaskMaker[P, R]:
+
     return cast(
-        Task[P, R],
-        Task(fn=fn),
+        TaskMaker[P, R],
+        TaskMaker(fn=fn),
     )
