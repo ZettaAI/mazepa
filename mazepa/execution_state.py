@@ -31,14 +31,14 @@ class InMemoryExecutionState:
     as in-memory data structures.
     """
 
-    ongoing_jobs: dict[str, Job]
+    ongoing_jobs: dict[str, Job] = attrs.field(converter=lambda x: {e.id_: e for e in x})
     ongoing_exhausted_job_ids: set[str] = attrs.field(factory=set)
     completed_ids: set[str] = attrs.field(factory=set)
 
-    parent_map: dict[str, Optional[str]] = attrs.field(
+    ongoing_parent_map: dict[str, Optional[str]] = attrs.field(
         init=False, default=defaultdict(lambda: None)
     )
-    uncompleted_children_map: dict[str, set[str]] = attrs.field(
+    ongoing_children_map: dict[str, set[str]] = attrs.field(
         init=False, factory=lambda: defaultdict(set)
     )
     dependency_map: dict[str, set[str]] = attrs.field(init=False, factory=lambda: defaultdict(set))
@@ -84,26 +84,40 @@ class InMemoryExecutionState:
         return result
 
     def _add_dependency(self, job_id: str, dep: Dependency):
-        if dep.is_barrier():  # depend on all uncompleted children
-            self.dependency_map[job_id].update(self.uncompleted_children_map[job_id])
+        if dep.is_barrier():  # depend on all ongoing children
+            self.dependency_map[job_id].update(self.ongoing_children_map[job_id])
+        else:
+            for id_ in dep.ids:
+                if id_ not in self.completed_ids:
+                    assert id_ in self.ongoing_children_map[job_id], f"Dependency on a non-child '{id_}' for job '{job_id}'"
+                    self.dependency_map[job_id].add(id_)
 
     def _update_completed_id(self, id_: str):
+        print (self.dependency_map)
+        print (self.ongoing_children_map)
+        self.ongoing_exhausted_job_ids.discard(id_)
         self.completed_ids.add(id_)
         self.ongoing_jobs.pop(id_, None)
-        self.ongoing_exhausted_job_ids.discard(id_)
 
-        parent_id = self.parent_map[id_]
-        if parent_id is not None and id_ in self.dependency_map[parent_id]:
-            self.dependency_map[parent_id].remove(id_)
-            if len(self.dependency_map[parent_id]) == 0:
-                self._update_completed_id(parent_id)
+
+        parent_id = self.ongoing_parent_map[id_]
+        if parent_id is not None :
+            if id_ in self.ongoing_children_map[parent_id]:
+                self.ongoing_children_map[parent_id].remove(id_)
+            if id_ in self.dependency_map[parent_id]:
+                self.dependency_map[parent_id].remove(id_)
+                if (
+                    parent_id in self.ongoing_exhausted_job_ids
+                    and len(self.dependency_map[parent_id]) == 0
+                ):
+                    self._update_completed_id(parent_id)
 
     def _get_batch_from_job(self, job):
         job_yield = job.get_next_batch()
         result = []
         if job_yield is None:  # Means the job is exhausted
             self.ongoing_exhausted_job_ids.add(job.id_)
-            self.dependency_map[job.id_].update(self.uncompleted_children_map[job.id_])
+            self.dependency_map[job.id_].update(self.ongoing_children_map[job.id_])
             # self.completed_ids.add(job.id_)
             # del self.ongoing_jobs[job.id_]
         elif isinstance(job_yield, Dependency):
@@ -111,7 +125,8 @@ class InMemoryExecutionState:
         else:
             for e in job_yield:
                 if e.id_ not in self.completed_ids:
-                    self.uncompleted_children_map[job.id_].add(e.id_)
+                    self.ongoing_children_map[job.id_].add(e.id_)
+                    self.ongoing_parent_map[e.id_] = job.id_
                     if isinstance(e, Job):
                         self.ongoing_jobs[e.id_] = e
                     else:

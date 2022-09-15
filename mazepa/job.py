@@ -26,10 +26,10 @@ class Job:
     """
 
     fn: Callable[..., JobFnReturnType]
-    id_: str = attrs.field(init=False, factory=lambda: f"job-{str(uuid.uuid1())}")
     iterator: Optional[JobFnReturnType] = attrs.field(init=False, default=None)
-    args: Iterable
-    kwargs: dict
+    args: Iterable = attrs.field(factory=list)
+    kwargs: dict = attrs.field(factory=dict)
+    id_: str = attrs.field(factory=lambda: f"job-{str(uuid.uuid1())}")
 
     def get_next_batch(self) -> BatchType:
         if self.iterator is None:

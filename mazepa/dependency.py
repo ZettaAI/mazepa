@@ -7,8 +7,7 @@ from typeguard import typechecked
 @typechecked
 @attrs.frozen
 class Dependency:
-    job_ids: Optional[Iterable[str]] = None
-    task_ids: Optional[Iterable[str]] = None
+    ids: Iterable[str] = attrs.field(factory=set)
 
-    def is_barrier(self) -> bool:
-        return self.job_ids is None and self.task_ids is None
+    def is_barrier(self):
+        return len(self.ids) == 0
