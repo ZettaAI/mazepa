@@ -1,35 +1,40 @@
 from __future__ import annotations
 
-from typing import Protocol, Iterable, runtime_checkable
+from typing import Protocol, Iterable, runtime_checkable, Dict
+from typeguard import typechecked
 import attrs
 from .task import Task
+from .task_outcome import TaskOutcome
 
 
 @runtime_checkable
-class ExecutionQueue(Protocol):
+class ExecutionQueue(Protocol): # pragma: no cover
+    name: str
+
     def purge(self):
         ...
 
     def push_tasks(self, tasks: Iterable[Task]):
         ...
 
-    def pull_completed_task_ids(self) -> Iterable[str]:
+    def pull_task_outcomes(self) -> Dict[str, TaskOutcome]:
         ...
 
 
+@typechecked
 @attrs.mutable
 class LocalExecutionQueue:
-    completed_task_ids: list[str] = attrs.field(init=False, factory=list)
+    task_outcomes: Dict[str, TaskOutcome] = attrs.field(init=False, factory=dict)
 
-    def purge(self):
+    def purge(self): # pragma: no cover
         pass
 
     def push_tasks(self, tasks: Iterable[Task]):
         for e in tasks:
             e()
-            self.completed_task_ids.append(e.id_)
+            self.task_outcomes[e.id_] = e.outcome
 
-    def pull_completed_task_ids(self) -> Iterable[str]:
-        result = self.completed_task_ids
-        self.completed_task_ids = []
+    def pull_task_outcomes(self) -> Dict[str, TaskOutcome]:
+        result = self.task_outcomes
+        self.task_outcomes = {}
         return result
