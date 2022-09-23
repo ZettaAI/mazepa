@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional, Iterable, Union, Callable
 import time
-import attrs
 
 from .execution_queue import ExecutionQueue, LocalExecutionQueue
 from .job import Job
@@ -14,7 +13,7 @@ def execute(
     exec_queue: Optional[ExecutionQueue] = None,
     batch_gap_sleep_sec: float = 4.0,
     purge_at_start: bool = False,
-    max_batch_len: Optional[int] = None,
+    max_batch_len: int = 10000,
     default_state_constructor: Callable[..., ExecutionState] = InMemoryExecutionState,
 ):
     """
@@ -26,9 +25,11 @@ def execute(
     if isinstance(target, ExecutionState):
         state = target
     else:
-        if isinstance(target, Job):
+        if not isinstance(target, Job):
+            jobs = target
+        else:
             jobs = [target]
-        state = default_state_constructor(ongoing_jobs={job.id_: job for job in jobs})
+        state = default_state_constructor(ongoing_jobs=jobs)
 
     if exec_queue is None:
         queue = LocalExecutionQueue()  # type: ExecutionQueue
@@ -45,5 +46,5 @@ def execute(
         task_batch = state.get_task_batch(max_batch_len=max_batch_len)
         queue.push_tasks(task_batch)
         time.sleep(batch_gap_sleep_sec)
-        completed_task_ids = queue.pull_completed_task_ids()
-        state.update_completed_task_ids(completed_task_ids)
+        task_outcomes = queue.pull_task_outcomes()
+        state.update_with_task_outcomes(task_outcomes)

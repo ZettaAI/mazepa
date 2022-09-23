@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 import pytest
-from mazepa import Dependency, job, TaskStatus, TaskOutcome, task_maker, execute, InMemoryExecutionState
+from mazepa import Dependency, job, TaskStatus, TaskOutcome, task_maker, execute, InMemoryExecutionState, LocalExecutionQueue
 
 TASK_COUNT = 0
 
@@ -55,6 +55,20 @@ def test_local_execution_state(reset_task_count):
             dummy_job(),
             dummy_job(),
         ]),
+        batch_gap_sleep_sec=0,
+        max_batch_len=2,
+        purge_at_start=True,
+    )
+    assert TASK_COUNT == 6
+
+def test_local_execution_state_queue(reset_task_count):
+    execute(
+        InMemoryExecutionState([
+            dummy_job(),
+            dummy_job(),
+            dummy_job(),
+        ]),
+        exec_queue=LocalExecutionQueue(),
         batch_gap_sleep_sec=0,
         max_batch_len=2,
         purge_at_start=True,

@@ -1,44 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Union, Any
 import pytest
-from mazepa import Job, Task, Dependency, InMemoryExecutionState, job
-
-@job
-def dummy_job(yields: list):
-    for e in yields:
-        yield e
-
-@pytest.mark.parametrize(
-    'job_specs, max_batch_len, expected_batch_ids, completed_task_ids, expected_ongoing_job_ids',
-    [
-
-
-
-    ]
-)
-def adsf_test_job_execution(
-    job_specs: dict[str, list[Union[Task, Job, Dependency]]],
-    max_batch_len: int,
-    expected_batch_ids,
-    completed_task_ids,
-    expected_ongoing_job_ids
-):
-    jobs = {
-        k: dummy_job(v) for k, v in job_specs.items()
-    }
-    for k, v in jobs.items():
-        v.id_ = k
-
-    state = InMemoryExecutionState(jobs)
-    assert state.get_ongoing_job_ids() == list(jobs.keys())
-
-    for i in range(len(expected_batch_ids)):
-        batch = state.get_task_batch(max_batch_len=max_batch_len)
-        assert [e.id_ for e in batch] == expected_batch_ids[i]
-
-        state.update_completed_task_ids(completed_task_ids[i])
-        assert state.get_ongoing_job_ids() == expected_ongoing_job_ids[i]
+from mazepa import Job, Task, Dependency, InMemoryExecutionState, job, TaskStatus, TaskOutcome
 
 
 @pytest.mark.parametrize(
@@ -232,11 +196,11 @@ def adsf_test_job_execution(
         ],
     ]
 )
-def test_job_execution_v2(
+def test_job_execution_flow(
     jobs: list[Job],
     max_batch_len: int,
     expected_batch_ids,
-    completed_task_ids,
+    completed_task_ids: list[list[str]],
     expected_ongoing_job_ids
 ):
     state = InMemoryExecutionState(ongoing_jobs=jobs)
@@ -245,6 +209,43 @@ def test_job_execution_v2(
         batch = state.get_task_batch(max_batch_len=max_batch_len)
         assert [e.id_ for e in batch] == expected_batch_ids[i]
 
-        state.update_completed_task_ids(completed_task_ids[i])
+        task_outcomes = {
+            id_: TaskOutcome[Any](status=TaskStatus.SUCCEEDED)
+            for id_ in completed_task_ids[i]
+        }
+        state.update_with_task_outcomes(task_outcomes)
         assert state.get_ongoing_job_ids() == expected_ongoing_job_ids[i]
+
+
+def test_task_outcome_setting():
+    # type: () -> None
+    task = Task(fn=lambda: None, kwargs={}, id_='a')
+    jobs = [
+        Job(
+            fn=iter,
+            args=[[task]],
+            id_='job_0',
+        )
+    ]
+    state = InMemoryExecutionState(ongoing_jobs=jobs)
+    state.get_task_batch()
+    outcomes = {'a': TaskOutcome(status=TaskStatus.SUCCEEDED, return_value=5566)}
+    state.update_with_task_outcomes(outcomes)
+    assert task.outcome == outcomes['a']
+
+def test_task_outcome_exc():
+    # type: () -> None
+    task = Task(fn=lambda: None, kwargs={}, id_='a')
+    jobs = [
+        Job(
+            fn=iter,
+            args=[[task]],
+            id_='job_0',
+        )
+    ]
+    state = InMemoryExecutionState(ongoing_jobs=jobs)
+    state.get_task_batch()
+    outcomes = {'a': TaskOutcome[Any](status=TaskStatus.FAILED)}
+    with pytest.raises(Exception):
+        state.update_with_task_outcomes(outcomes)
 
