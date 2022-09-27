@@ -34,7 +34,6 @@ class Job:
     task_execution_env: Optional[TaskExecutionEnv] = attrs.field(default=None)
     _iterator: Optional[JobFnReturnType] = attrs.field(init=False, default=None)
 
-
     @contextmanager
     def task_execution_env_ctx(self, env: Optional[TaskExecutionEnv]):
         old_env = self.task_execution_env
