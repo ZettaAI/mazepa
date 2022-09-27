@@ -1,11 +1,11 @@
 from __future__ import annotations
-from typing import Any
-import pytest
-from mazepa import Dependency, Job, TaskExecutionEnv
+from mazepa import Job, TaskExecutionEnv
+
 
 def test_task_env_default():
     j = Job(fn=lambda: None)
     assert j.task_execution_env is None
+
 
 def test_ctx():
     j = Job(fn=lambda: None)

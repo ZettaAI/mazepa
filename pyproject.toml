@@ -28,6 +28,7 @@ dependencies = [
     "typeguard >= 2.13.3",
     "task-queue",
     "boto3",
+    "zetta_utils",
 ]
 dynamic = ["version"]
 

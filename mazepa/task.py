@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from typing import Callable, TypeVar, Generic, cast, Optional
 import functools
 from typing_extensions import ParamSpec
@@ -34,7 +35,7 @@ class TaskMaker(Generic[P, R]):
         self: "TaskMaker[P, R]",
         *args: P.args,
         **kwargs: P.kwargs,
-    ) -> R: # pragma: no cover
+    ) -> R:  # pragma: no cover
         return self.fn(*args, **kwargs)
 
     def make_task(
@@ -60,8 +61,8 @@ class Task(Generic[P, R]):
     """
 
     fn: Callable[P, R]
-    kwargs: dict
-    id_: str
+    kwargs: dict = {}
+    id_: str = attrs.field(factory=lambda: str(uuid.uuid1()))
     task_execution_env: TaskExecutionEnv = attrs.field(factory=TaskExecutionEnv)
 
     _mazepa_callbacks: list[Callable] = attrs.field(factory=list)
