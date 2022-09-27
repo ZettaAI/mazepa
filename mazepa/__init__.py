@@ -1,4 +1,3 @@
-from . import log
 from . import serialization
 from .dependency import Dependency
 from .task import Task, TaskMaker, task_maker

@@ -15,21 +15,13 @@ class TQTask(taskqueue.RegisteredTask):
     Wrapper that makes Mazepa tasks submittable with `python-task-queue`.
     """
 
-    def __init__(self, task: Task):
-        task_ser = serialization.serialize(task)
-
+    def __init__(self, task_ser: str):
         super().__init__(
             task_ser=task_ser,
         )
 
-    def execute(self):
-        task = serialization.deserialize(
-            self.task_ser  # pylint: disable=no-member # because of tq
-        )
-        task()
-
-    def __eq__(self, other):
-        return self.task_ser == other.task_ser  # pylint: disable=no-member # because of tq
+    def execute(self):  # pragma: no cover
+        raise NotImplementedError()
 
 
 @attrs.frozen
@@ -46,6 +38,21 @@ def _send_outcome_report(
         region_name=region_name,
         endpoint_url=endpoint_url,
         msg_body=serialization.serialize(OutcomeReport(task_id=task.id_, outcome=task.outcome)),
+    )
+
+
+def _delete_task_message(
+    task: Task,  # pylint: disable=unused-argument
+    receipt_handle: str,
+    queue_name: str,
+    region_name: str,
+    endpoint_url: Optional[str] = None,
+):
+    sqs_utils.delete_msg_by_receipt_handle(
+        receipt_handle=receipt_handle,
+        queue_name=queue_name,
+        region_name=region_name,
+        endpoint_url=endpoint_url,
     )
 
 
@@ -81,7 +88,7 @@ class SQSExecutionQueue:
                     endpoint_url=self.endpoint_url,
                 )
             )
-        tq_tasks = [TQTask(e) for e in tasks]
+        tq_tasks = [TQTask(serialization.serialize(e)) for e in tasks]
         self._queue.insert(tq_tasks, parallel=self.insertion_threads)
 
     def pull_task_outcomes(
@@ -106,8 +113,26 @@ class SQSExecutionQueue:
         return result
 
     def pull_tasks(self, lease_seconds: int, max_task_num: int = 1, wait_sec: int = 0):
-        tq_tasks = self._queue.lease(
-            seconds=lease_seconds, num_tasks=max_task_num, wait_sec=wait_sec
-        )
-        tasks = [serialization.deserialize(e.task_ser) for e in tq_tasks]
+        try:
+            tq_tasks = self._queue.lease(
+                seconds=lease_seconds, num_tasks=max_task_num, wait_sec=wait_sec
+            )
+        except taskqueue.taskqueue.QueueEmptyError:
+            tq_tasks = []
+
+        if not isinstance(tq_tasks, list):
+            tq_tasks = [tq_tasks]
+        tasks = []
+        for tq_task in tq_tasks:
+            task = serialization.deserialize(tq_task.task_ser)
+            task._mazepa_callbacks.append(  # pylint: disable=protected-access
+                ComparablePartial(
+                    _delete_task_message,
+                    receipt_handle=tq_task.id,
+                    queue_name=self.outcome_queue_name,
+                    region_name=self.region_name,
+                    endpoint_url=self.endpoint_url,
+                )
+            )
+            tasks.append(task)
         return tasks

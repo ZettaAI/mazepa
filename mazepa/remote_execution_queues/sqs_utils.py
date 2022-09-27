@@ -115,6 +115,19 @@ def delete_received_msgs(msgs: list[SQSReceivedMsg]) -> None:
             )
 
 
+@tenacity.retry(stop=tenacity.stop_after_attempt(5), wait=tenacity.wait_random(min=0.5, max=2))
+def delete_msg_by_receipt_handle(
+    receipt_handle: str,
+    queue_name: str,
+    region_name: str,
+    endpoint_url: Optional[str] = None,
+):
+    get_sqs_client(region_name, endpoint_url=endpoint_url).delete_message(
+        QueueUrl=get_queue_url(queue_name, region_name, endpoint_url=endpoint_url),
+        ReceiptHandle=receipt_handle,
+    )
+
+
 def delete_msg_batch(
     receipt_handles: list[dict],
     queue_name: str,
@@ -137,4 +150,4 @@ def delete_msg_batch(
         if len(entries_left) == 0:
             return
 
-    raise RuntimeError(f"Failed to delete messages: {ack}")
+    raise RuntimeError(f"Failed to delete messages: {ack}")  # pragma: no cover
