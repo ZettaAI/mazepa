@@ -14,7 +14,7 @@ def execute(
     batch_gap_sleep_sec: float = 4.0,
     purge_at_start: bool = False,
     max_batch_len: int = 10000,
-    default_state_constructor: Callable[..., ExecutionState] = InMemoryExecutionState,
+    state_constructor: Callable[..., ExecutionState] = InMemoryExecutionState,
 ):
     """
     Executes a target until completion using the given execution queue.
@@ -29,7 +29,7 @@ def execute(
             jobs = target
         else:
             jobs = [target]
-        state = default_state_constructor(ongoing_jobs=jobs)
+        state = state_constructor(ongoing_jobs=jobs)
 
     if exec_queue is None:
         queue = LocalExecutionQueue()  # type: ExecutionQueue
