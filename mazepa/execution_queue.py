@@ -36,7 +36,7 @@ class LocalExecutionQueue:
     def purge(self):  # pragma: no cover
         pass
 
-    def push_tasks(self, tasks: List[Task]):
+    def push_tasks(self, tasks: Iterable[Task]):
         for e in tasks:
             e()
             self.task_outcomes[e.id_] = e.outcome
