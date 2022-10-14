@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Callable, TypeVar, Generic, cast, Optional
+from typing import Callable, TypeVar, Generic, Optional
 import functools
 from typing_extensions import ParamSpec
 import attrs
@@ -12,6 +12,7 @@ from .task_execution_env import TaskExecutionEnv
 
 R = TypeVar("R")
 P = ParamSpec("P")
+P1 = ParamSpec("P1")
 
 # TODO: is tehre a better way?
 NOT_EXECUTED = object()
@@ -19,9 +20,23 @@ UNKNOWN_RESULT = object()
 
 
 @attrs.mutable
+class TaskMakerCls(Generic[P, R]):
+    """
+    Wraps a callable class to be executable by Mazepa scheduler.
+    """
+
+    cls: Callable[P, R]
+    id_fn: Callable[[Callable, dict], str] = attrs.field(
+        init=False, default=id_generators.get_unique_id
+    )
+    task_execution_env: TaskExecutionEnv = attrs.field(factory=TaskExecutionEnv)
+    # max_retry: # Even for SQS, can use approximateReceiveCount to explicitly fail the task
+
+
+@attrs.mutable
 class TaskMaker(Generic[P, R]):
     """
-    Wraps a function with to be executable by Mazepa scheduler.
+    Wraps a function to be executable by Mazepa scheduler.
     """
 
     fn: Callable[P, R]
@@ -104,7 +119,16 @@ class Task(Generic[P, R]):
 def task_maker(
     fn: Callable[P, R],
 ) -> TaskMaker[P, R]:
-    return cast(
-        TaskMaker[P, R],
-        TaskMaker(fn=fn),
-    )
+    return TaskMaker(fn=fn)
+
+
+def _new_task_maker_cls(cls: Callable[P, Callable[P1, R]], *args: P.args, **kwargs: P.kwargs):
+    obj = object.__new__(cls)  # type: ignore
+    object.__setattr__(obj, "make_task", TaskMaker(obj.__call__).make_task)  # type: ignore
+    obj.__init__(*args, **kwargs)  # type: ignore
+    return obj
+
+
+def task_maker_cls(cls: Callable[P, R]) -> Callable[P, R]:
+    cls.__new__ = _new_task_maker_cls  # type: ignore
+    return cls

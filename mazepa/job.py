@@ -5,7 +5,6 @@ from contextlib import contextmanager
 import uuid
 from typing_extensions import ParamSpec
 import attrs
-from typeguard import typechecked
 from .task import Task
 from .dependency import Dependency
 from .task_execution_env import TaskExecutionEnv
@@ -20,7 +19,7 @@ P = ParamSpec("P")
 JOB_EXHAUSTED = object()
 
 
-@typechecked
+# @typechecked # too slow
 @attrs.mutable
 class Job:
     """
