@@ -4,8 +4,11 @@ from collections import defaultdict
 from typing import Protocol, Iterable, runtime_checkable, Dict, List
 from typeguard import typechecked
 import attrs
+from zetta_utils.log import get_logger
 from .task import Task
 from .task_outcome import TaskOutcome
+
+logger = get_logger("mazepa")
 
 
 @runtime_checkable
@@ -38,7 +41,9 @@ class LocalExecutionQueue:
 
     def push_tasks(self, tasks: Iterable[Task]):
         for e in tasks:
+            logger.debug(f"STARTING: Execution of {e}.")
             e()
+            logger.debug(f"DONE: Execution of {e}.")
             self.task_outcomes[e.id_] = e.outcome
 
     def pull_task_outcomes(
@@ -69,6 +74,7 @@ class ExecutionMultiQueue:
     def purge(self):
         for e in self.queues:
             e.purge()
+            logger.debug(f"Purged {e}.")
 
     def push_tasks(self, tasks: Iterable[Task]):
         tasks_for_queue = defaultdict(list)
