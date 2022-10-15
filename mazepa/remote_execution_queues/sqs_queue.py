@@ -60,11 +60,13 @@ def _delete_task_message(
 @attrs.mutable
 class SQSExecutionQueue:
     name: str
-    _queue: Any = attrs.field(init=False)
     region_name: str = attrs.field(default=taskqueue.secrets.AWS_DEFAULT_REGION)
     endpoint_url: Optional[str] = None
     insertion_threads: int = 0
     outcome_queue_name: Optional[str] = None
+    _queue: Any = attrs.field(init=False)
+    pull_wait_sec: int = 0
+    pull_lease_sec: int = 30
 
     def __attrs_post_init__(self):
         # Use TaskQueue for fast insertion
@@ -112,16 +114,17 @@ class SQSExecutionQueue:
 
         return result
 
-    def pull_tasks(self, lease_seconds: int, max_task_num: int = 1, wait_sec: int = 0):
+    def pull_tasks(self, max_num: int = 1):
         try:
             tq_tasks = self._queue.lease(
-                seconds=lease_seconds, num_tasks=max_task_num, wait_sec=wait_sec
+                seconds=self.pull_lease_sec, num_tasks=max_num, wait_sec=self.pull_wait_sec
             )
         except taskqueue.taskqueue.QueueEmptyError:
             tq_tasks = []
 
         if not isinstance(tq_tasks, list):
             tq_tasks = [tq_tasks]
+
         tasks = []
         for tq_task in tq_tasks:
             task = serialization.deserialize(tq_task.task_ser)
@@ -129,7 +132,7 @@ class SQSExecutionQueue:
                 ComparablePartial(
                     _delete_task_message,
                     receipt_handle=tq_task.id,
-                    queue_name=self.outcome_queue_name,
+                    queue_name=self.name,
                     region_name=self.region_name,
                     endpoint_url=self.endpoint_url,
                 )
