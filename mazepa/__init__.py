@@ -8,3 +8,4 @@ from .execution_queue import ExecutionQueue, LocalExecutionQueue, ExecutionMulti
 from .execution_state import ExecutionState, InMemoryExecutionState
 from .execute import execute, Executor
 from .remote_execution_queues import SQSExecutionQueue
+from .worker import run_worker

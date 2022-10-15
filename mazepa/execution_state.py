@@ -71,8 +71,10 @@ class InMemoryExecutionState:
                     )
                 raise outcome.exception
             assert outcome.status == TaskStatus.SUCCEEDED
-            self.ongoing_tasks[task_id].outcome = outcome
-            self._update_completed_id(task_id)
+
+            if task_id in self.ongoing_tasks:
+                self.ongoing_tasks[task_id].outcome = outcome
+                self._update_completed_id(task_id)
 
     def get_task_batch(self, max_batch_len: int = 10000) -> List[Task]:
         """

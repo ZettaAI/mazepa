@@ -22,7 +22,8 @@ class ExecutionQueue(Protocol):  # pragma: no cover
         ...
 
     def pull_task_outcomes(
-        self, max_num: int = ..., max_time_sec: float = ...
+        self,
+        max_num: int = ...,
     ) -> dict[str, TaskOutcome]:
         ...
 

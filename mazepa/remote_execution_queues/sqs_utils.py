@@ -7,6 +7,10 @@ import attrs
 import tenacity
 import boto3  # type: ignore
 
+from zetta_utils.log import get_logger
+
+logger = get_logger("mazepa")
+
 
 @attrs.frozen
 class SQSReceivedMsg:
@@ -122,6 +126,10 @@ def delete_msg_by_receipt_handle(
     region_name: str,
     endpoint_url: Optional[str] = None,
 ):
+    logger.debug(
+        f"Deleting message with handle '{receipt_handle}' from queue '{queue_name}'"
+        f"in region '{region_name}'"
+    )
     get_sqs_client(region_name, endpoint_url=endpoint_url).delete_message(
         QueueUrl=get_queue_url(queue_name, region_name, endpoint_url=endpoint_url),
         ReceiptHandle=receipt_handle,
