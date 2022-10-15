@@ -1,10 +1,21 @@
 from __future__ import annotations
 
-from typing import Callable, TypeVar, Generator, Union, Any, Optional, Iterable, List
+from typing import (
+    Callable,
+    Generator,
+    Union,
+    Any,
+    Optional,
+    List,
+    Generic,
+    Iterable,
+    Dict,
+)
 from contextlib import contextmanager
 import uuid
 from typing_extensions import ParamSpec
 import attrs
+from coolname import generate_slug  # type: ignore
 from .task import Task
 from .dependency import Dependency
 from .task_execution_env import TaskExecutionEnv
@@ -13,25 +24,41 @@ from .task_execution_env import TaskExecutionEnv
 BatchType = Optional[Union[Dependency, List[Task], List["Job"]]]
 JobFnYieldType = Union[Dependency, "Task", List["Task"], "Job", List["Job"]]
 JobFnReturnType = Generator[JobFnYieldType, None, Any]
-R = TypeVar("R", bound=JobFnReturnType)
 P = ParamSpec("P")
 
 JOB_EXHAUSTED = object()
 
 
-# @typechecked # too slow
-@attrs.mutable
-class Job:
+@attrs.mutable(init=False)
+class Job(Generic[P]):
     """
     Wraps a function to become a job that can be registered with Mazepa scheduler.
     """
 
-    fn: Callable[..., JobFnReturnType]
-    args: Iterable = attrs.field(factory=list)
-    kwargs: dict = attrs.field(factory=dict)
-    id_: str = attrs.field(factory=lambda: f"job-{str(uuid.uuid1())}")
-    task_execution_env: Optional[TaskExecutionEnv] = attrs.field(default=None)
-    _iterator: Optional[JobFnReturnType] = attrs.field(init=False, default=None)
+    id_: str
+    task_execution_env: Optional[TaskExecutionEnv]
+    _iterator: JobFnReturnType
+    fn: Callable[P, JobFnReturnType]
+    # These are saved as attributes just for printability.
+    args: Iterable
+    kwargs: Dict
+
+    # Disabling attrs init to use P Param Spec for args and kwargs.
+    # Improvements wellcome
+    def __init__(
+        self,
+        fn: Callable[P, JobFnReturnType],
+        id_: str,
+        task_execution_env: Optional[TaskExecutionEnv],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ):
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.id_ = id_
+        self.task_execution_env = task_execution_env
+        self._iterator = fn(*args, **kwargs)
 
     @contextmanager
     def task_execution_env_ctx(self, env: Optional[TaskExecutionEnv]):
@@ -41,8 +68,6 @@ class Job:
         self.task_execution_env = old_env
 
     def get_next_batch(self) -> BatchType:
-        if self._iterator is None:
-            self._iterator = self.fn(*self.args, **self.kwargs)
         yielded = next(self._iterator, None)
 
         result: BatchType
@@ -60,8 +85,19 @@ class Job:
         return result
 
 
-def job(fn: Callable[P, JobFnReturnType]) -> Callable[..., Job]:  # pragma: no cover
+def job(fn: Callable[P, JobFnReturnType]) -> Callable[P, Job[P, JobFnReturnType]]:
     def wrapped(*args: P.args, **kwargs: P.kwargs):
-        return Job(fn=fn, args=args, kwargs=kwargs)
+        if len(args) != 0:
+            raise RuntimeError(
+                "Only keyword arguments are allowed for mazepa jobs. "
+                f"Got: args={args}, kwargs={kwargs}"
+            )
+        result = Job(
+            fn=fn,
+            id_=f"job-{generate_slug(2)}-{str(uuid.uuid1())}",
+            task_execution_env=None,  # TODO
+            **kwargs,
+        )
+        return result
 
     return wrapped

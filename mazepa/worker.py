@@ -5,7 +5,9 @@ from . import ExecutionQueue
 logger = get_logger("mazepa")
 
 
-def run_worker(exec_queue: ExecutionQueue, sleep_sec: int = 4, max_pull_num: int = 1):
+def run_worker(
+    exec_queue: ExecutionQueue, sleep_sec: int = 4, max_pull_num: int = 1
+):  # pragma: no cover # TODO
     while True:
         tasks = exec_queue.pull_tasks(max_num=max_pull_num)
         logger.info(f"Got {len(tasks)} tasks.")

@@ -11,6 +11,7 @@ from mazepa import (
     InMemoryExecutionState,
     LocalExecutionQueue,
 )
+from mazepa.remote_execution_queues import SQSExecutionQueue
 
 TASK_COUNT = 0
 
@@ -37,6 +38,11 @@ def dummy_job():
     assert task1.outcome.return_value == "output1"
     task2 = dummy_task.make_task(return_value="output2")
     yield task2
+
+
+@job
+def empty_job():
+    yield []
 
 
 def test_local_execution_defaults(reset_task_count):
@@ -93,3 +99,27 @@ def test_local_execution_state_queue(reset_task_count):
         purge_at_start=True,
     )
     assert TASK_COUNT == 6
+
+
+def test_local_no_sleep(mocker):
+    sleep_m = mocker.patch("time.sleep")
+    execute(
+        empty_job(),
+        batch_gap_sleep_sec=10,
+        max_batch_len=2,
+        purge_at_start=True,
+    )
+    sleep_m.assert_not_called()
+
+
+def test_non_local_sleep(mocker):
+    sleep_m = mocker.patch("time.sleep")
+    queue_m = mocker.MagicMock(spec=SQSExecutionQueue)
+    execute(
+        empty_job(),
+        batch_gap_sleep_sec=10,
+        max_batch_len=2,
+        purge_at_start=True,
+        exec_queue=queue_m,
+    )
+    sleep_m.assert_called_once()
