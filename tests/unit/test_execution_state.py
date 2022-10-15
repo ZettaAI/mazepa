@@ -1,8 +1,13 @@
+# type: ignore # We're breaking mypy here
 from __future__ import annotations
 
 from typing import Any
 import pytest
 from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, TaskOutcome
+
+
+def dummy_iter(iterable):
+    return iter(iterable)
 
 
 @pytest.mark.parametrize(
@@ -11,9 +16,12 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[[Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]]],
+                    fn=dummy_iter,
+                    iterable=[
+                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
+                    ],
                     id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             10,
@@ -24,9 +32,12 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[[Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]]],
+                    fn=dummy_iter,
+                    iterable=[
+                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
+                    ],
                     id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             10,
@@ -37,9 +48,12 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[[Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]]],
+                    fn=dummy_iter,
+                    iterable=[
+                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
+                    ],
                     id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             10,
@@ -50,9 +64,12 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[[Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]]],
+                    fn=dummy_iter,
+                    iterable=[
+                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
+                    ],
                     id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             1,
@@ -63,15 +80,14 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[
-                        [
-                            Task(fn=lambda: None, kwargs={}, id_="a"),
-                            Dependency(),
-                            Task(fn=lambda: None, kwargs={}, id_="b"),
-                        ]
+                    fn=dummy_iter,
+                    iterable=[
+                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        Dependency(),
+                        Task(fn=lambda: None, kwargs={}, id_="b"),
                     ],
                     id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             10,
@@ -82,15 +98,14 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[
-                        [
-                            Task(fn=lambda: None, kwargs={}, id_="a"),
-                            Dependency(),
-                            Task(fn=lambda: None, kwargs={}, id_="b"),
-                        ]
+                    fn=dummy_iter,
+                    iterable=[
+                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        Dependency(),
+                        Task(fn=lambda: None, kwargs={}, id_="b"),
                     ],
                     id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             10,
@@ -101,65 +116,62 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[
-                        [
-                            [
-                                Task(fn=lambda: None, kwargs={}, id_="a"),
-                                Task(fn=lambda: None, kwargs={}, id_="b"),
-                                Task(fn=lambda: None, kwargs={}, id_="c"),
-                            ],
-                            Dependency(["a"]),
-                            [
-                                Task(fn=lambda: None, kwargs={}, id_="d"),
-                            ],
-                        ]
-                    ],
-                    id_="job_0",
-                )
-            ],
-            10,
-            [["a", "b", "c"], [], ["d"]],
-            [["b"], ["a"], ["c", "d"]],
-            [["job_0"], ["job_0"], []],
-        ],
-        [
-            [
-                Job(
-                    fn=iter,
-                    args=[
-                        [
-                            [
-                                Task(fn=lambda: None, kwargs={}, id_="a"),
-                                Task(fn=lambda: None, kwargs={}, id_="b"),
-                                Task(fn=lambda: None, kwargs={}, id_="c"),
-                            ],
-                            Dependency(["a"]),
-                            [
-                                Task(fn=lambda: None, kwargs={}, id_="d"),
-                            ],
-                        ]
-                    ],
-                    id_="job_0",
-                )
-            ],
-            10,
-            [["a", "b", "c"], [], ["d"]],
-            [["b"], ["a"], ["c", "d"]],
-            [["job_0"], ["job_0"], []],
-        ],
-        [
-            [
-                Job(
-                    fn=iter,
-                    args=[
+                    fn=dummy_iter,
+                    iterable=[
                         [
                             Task(fn=lambda: None, kwargs={}, id_="a"),
-                            Dependency(),
                             Task(fn=lambda: None, kwargs={}, id_="b"),
-                        ]
+                            Task(fn=lambda: None, kwargs={}, id_="c"),
+                        ],
+                        Dependency(["a"]),
+                        [
+                            Task(fn=lambda: None, kwargs={}, id_="d"),
+                        ],
                     ],
                     id_="job_0",
+                    task_execution_env=None,
+                )
+            ],
+            10,
+            [["a", "b", "c"], [], ["d"]],
+            [["b"], ["a"], ["c", "d"]],
+            [["job_0"], ["job_0"], []],
+        ],
+        [
+            [
+                Job(
+                    fn=dummy_iter,
+                    iterable=[
+                        [
+                            Task(fn=lambda: None, kwargs={}, id_="a"),
+                            Task(fn=lambda: None, kwargs={}, id_="b"),
+                            Task(fn=lambda: None, kwargs={}, id_="c"),
+                        ],
+                        Dependency(["a"]),
+                        [
+                            Task(fn=lambda: None, kwargs={}, id_="d"),
+                        ],
+                    ],
+                    id_="job_0",
+                    task_execution_env=None,
+                )
+            ],
+            10,
+            [["a", "b", "c"], [], ["d"]],
+            [["b"], ["a"], ["c", "d"]],
+            [["job_0"], ["job_0"], []],
+        ],
+        [
+            [
+                Job(
+                    fn=dummy_iter,
+                    iterable=[
+                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        Dependency(),
+                        Task(fn=lambda: None, kwargs={}, id_="b"),
+                    ],
+                    id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             10,
@@ -170,27 +182,25 @@ from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, Ta
         [
             [
                 Job(
-                    fn=iter,
-                    args=[
-                        [
-                            Job(
-                                fn=iter,
-                                args=[
-                                    [
-                                        Task(fn=lambda: None, kwargs={}, id_="x"),
-                                        Task(fn=lambda: None, kwargs={}, id_="y"),
-                                        Dependency(["x"]),
-                                        Task(fn=lambda: None, kwargs={}, id_="z"),
-                                    ]
-                                ],
-                                id_="job_1",
-                            ),
-                            Task(fn=lambda: None, kwargs={}, id_="a"),
-                            Dependency("a"),
-                            Task(fn=lambda: None, kwargs={}, id_="b"),
-                        ]
+                    fn=dummy_iter,
+                    iterable=[
+                        Job(
+                            fn=dummy_iter,
+                            iterable=[
+                                Task(fn=lambda: None, kwargs={}, id_="x"),
+                                Task(fn=lambda: None, kwargs={}, id_="y"),
+                                Dependency(["x"]),
+                                Task(fn=lambda: None, kwargs={}, id_="z"),
+                            ],
+                            id_="job_1",
+                            task_execution_env=None,
+                        ),
+                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        Dependency("a"),
+                        Task(fn=lambda: None, kwargs={}, id_="b"),
                     ],
                     id_="job_0",
+                    task_execution_env=None,
                 )
             ],
             10,
@@ -223,13 +233,7 @@ def test_job_execution_flow(
 def test_task_outcome_setting():
     # type: () -> None
     task = Task(fn=lambda: None, kwargs={}, id_="a")
-    jobs = [
-        Job(
-            fn=iter,
-            args=[[task]],
-            id_="job_0",
-        )
-    ]
+    jobs = [Job(fn=dummy_iter, iterable=[task], id_="job_0", task_execution_env=None)]
     state = InMemoryExecutionState(ongoing_jobs=jobs)
     state.get_task_batch()
     outcomes = {"a": TaskOutcome(status=TaskStatus.SUCCEEDED, return_value=5566)}
@@ -240,13 +244,7 @@ def test_task_outcome_setting():
 def test_task_outcome_exc():
     # type: () -> None
     task = Task(fn=lambda: None, kwargs={}, id_="a")
-    jobs = [
-        Job(
-            fn=iter,
-            args=[[task]],
-            id_="job_0",
-        )
-    ]
+    jobs = [Job(fn=dummy_iter, iterable=[task], id_="job_0", task_execution_env=None)]
     state = InMemoryExecutionState(ongoing_jobs=jobs)
     state.get_task_batch()
     outcomes = {"a": TaskOutcome[Any](status=TaskStatus.FAILED)}

@@ -98,11 +98,12 @@ def test_polling_not_done(work_queue, outcome_queue):
         region_name=region_name,
         endpoint_url=endpoint_url,
         outcome_queue_name=outcome_queue_name,
+        pull_lease_sec=1,
     )
     queue.push_tasks([Task(lambda: "Success")])
-    pulled_tasks = queue.pull_tasks(lease_seconds=1)
+    pulled_tasks = queue.pull_tasks()
     time.sleep(1.5)
-    pulled_tasks = queue.pull_tasks(lease_seconds=1)
+    pulled_tasks = queue.pull_tasks()
     assert len(pulled_tasks) == 1
 
 
@@ -114,9 +115,10 @@ def test_polling_done(work_queue, outcome_queue):
         region_name=region_name,
         endpoint_url=endpoint_url,
         outcome_queue_name=outcome_queue_name,
+        pull_lease_sec=1,
     )
     queue.push_tasks([Task(lambda: "Success")])
-    pulled_tasks = queue.pull_tasks(lease_seconds=1)
+    pulled_tasks = queue.pull_tasks()
     pulled_tasks[0]()
-    pulled_tasks = queue.pull_tasks(lease_seconds=1)
+    pulled_tasks = queue.pull_tasks()
     assert len(pulled_tasks) == 0
