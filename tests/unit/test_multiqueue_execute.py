@@ -2,6 +2,7 @@ from __future__ import annotations
 import time
 import pytest
 from mazepa import ExecutionMultiQueue, Task, TaskExecutionEnv
+from .maker_utils import make_test_task
 
 
 def test_constructor(mocker):
@@ -31,9 +32,13 @@ def test_push_tasks(mocker):
     queue_a.name = "a"
     queue_b.name = "b"
     meq = ExecutionMultiQueue([queue_a, queue_b])
-    task_a = Task(lambda: None, "dummy", {}, task_execution_env=TaskExecutionEnv(tags=["a"]))
-    task_b = Task(lambda: None, "dummy", {}, task_execution_env=TaskExecutionEnv(tags=["b"]))
-    task_bb = Task(lambda: None, "dummy", {}, task_execution_env=TaskExecutionEnv(tags=["b"]))
+    task_a = make_test_task(
+        lambda: None, id_="dummy", task_execution_env=TaskExecutionEnv(tags=["a"])
+    )
+    task_b = make_test_task(lambda: None, "dummy", task_execution_env=TaskExecutionEnv(tags=["b"]))
+    task_bb = make_test_task(
+        lambda: None, "dummy", task_execution_env=TaskExecutionEnv(tags=["b"])
+    )
     meq.push_tasks([task_a, task_b, task_bb])
     queue_a.push_tasks.assert_called_with([task_a])
     queue_b.push_tasks.assert_called_with([task_b, task_bb])
@@ -45,7 +50,7 @@ def test_push_tasks_exc(mocker):
     queue_a.name = "a"
     queue_b.name = "b"
     meq = ExecutionMultiQueue([queue_a, queue_b])
-    task_c = Task(lambda: None, "dummy", {}, task_execution_env=TaskExecutionEnv(tags=["c"]))
+    task_c = Task(lambda: None, "dummy", task_execution_env=TaskExecutionEnv(tags=["c"]))
     with pytest.raises(RuntimeError):
         meq.push_tasks([task_c])
 

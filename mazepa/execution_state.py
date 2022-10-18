@@ -5,18 +5,18 @@ from collections import defaultdict
 import attrs
 from typeguard import typechecked
 
-from .job import Job
-from .task import Task
+from .flows import Flow
+from .tasks import Task
 from .task_outcome import TaskOutcome, TaskStatus
 from .dependency import Dependency
 
 
 @runtime_checkable
 class ExecutionState(Protocol):  # pragma: no cover
-    def __init__(self, ongoing_jobs: dict[str, Job], completed_ids: Iterable[str] = ...):
+    def __init__(self, ongoing_flows: dict[str, Flow], completed_ids: Iterable[str] = ...):
         ...
 
-    def get_ongoing_job_ids(self) -> list[str]:
+    def get_ongoing_flow_ids(self) -> list[str]:
         ...
 
     def update_with_task_outcomes(self, task_outcomes: dict[str, TaskOutcome]):
@@ -34,8 +34,8 @@ class InMemoryExecutionState:
     as in-memory data structures.
     """
 
-    ongoing_jobs: Dict[str, Job] = attrs.field(converter=lambda x: {e.id_: e for e in x})
-    ongoing_exhausted_job_ids: Set[str] = attrs.field(factory=set)
+    ongoing_flows: Dict[str, Flow] = attrs.field(converter=lambda x: {e.id_: e for e in x})
+    ongoing_exhausted_flow_ids: Set[str] = attrs.field(factory=set)
     ongoing_parent_map: Dict[str, Optional[str]] = attrs.field(
         init=False, default=defaultdict(lambda: None)
     )
@@ -47,16 +47,16 @@ class InMemoryExecutionState:
     completed_ids: Set[str] = attrs.field(factory=set)
     dependency_map: Dict[str, Set[str]] = attrs.field(init=False, factory=lambda: defaultdict(set))
 
-    def get_ongoing_job_ids(self) -> List[str]:
+    def get_ongoing_flow_ids(self) -> List[str]:
         """
-        Return ids of the jobs that haven't been completed.
+        Return ids of the flows that haven't been completed.
         """
-        return list(self.ongoing_jobs.keys())
+        return list(self.ongoing_flows.keys())
 
     def update_with_task_outcomes(self, task_outcomes: Dict[str, TaskOutcome]):
         """
-        Given a mapping from task ids to task outcomes, update dependency and state of the
-        execution. If any of the tasks outcomes indicates failure, will raise exception specified
+        Given a mapping from tasks ids to task outcomes, update dependency and state of the
+        execution. If any of the task outcomes indicates failure, will raise exception specified
         in the task outcome.
 
         :param task_ids: IDs of tasks indicated as completed.
@@ -80,21 +80,21 @@ class InMemoryExecutionState:
         """
         Generate the next batch of tasks that are ready for execution.
 
-        :param max_batch_len: size limit after which no more jobs will be querries for
+        :param max_batch_len: size limit after which no more flows will be querries for
             additional tasks. Note that the return length might be larger than
-            ``max_batch_len``, as individual job batches may not be subdivided.
+            ``max_batch_len``, as individual flows batches may not be subdivided.
         """
 
         result = []  # type: List[Task]
-        for job in list(self.ongoing_jobs.values()):
+        for flow in list(self.ongoing_flows.values()):
             while (
-                job.id_ in self.ongoing_jobs
-                and len(self.dependency_map[job.id_]) == 0
+                flow.id_ in self.ongoing_flows
+                and len(self.dependency_map[flow.id_]) == 0
                 and len(result) < max_batch_len
-                and job.id_ not in self.ongoing_exhausted_job_ids
+                and flow.id_ not in self.ongoing_exhausted_flow_ids
             ):
-                job_batch = self._get_batch_from_job(job)
-                result.extend(job_batch)
+                flow_batch = self._get_batch_from_flow(flow)
+                result.extend(flow_batch)
 
             if len(result) >= max_batch_len:
                 break
@@ -104,22 +104,22 @@ class InMemoryExecutionState:
 
         return result
 
-    def _add_dependency(self, job_id: str, dep: Dependency):
+    def _add_dependency(self, flow_id: str, dep: Dependency):
         if dep.is_barrier():  # depend on all ongoing children
-            self.dependency_map[job_id].update(self.ongoing_children_map[job_id])
+            self.dependency_map[flow_id].update(self.ongoing_children_map[flow_id])
         else:
             for id_ in dep.ids:
                 if id_ not in self.completed_ids:
                     assert (
-                        id_ in self.ongoing_children_map[job_id]
-                    ), f"Dependency on a non-child '{id_}' for job '{job_id}'"
+                        id_ in self.ongoing_children_map[flow_id]
+                    ), f"Dependency on a non-child '{id_}' for flows '{flow_id}'"
 
-                    self.dependency_map[job_id].add(id_)
+                    self.dependency_map[flow_id].add(id_)
 
     def _update_completed_id(self, id_: str):
         self.completed_ids.add(id_)
-        self.ongoing_exhausted_job_ids.discard(id_)
-        self.ongoing_jobs.pop(id_, None)
+        self.ongoing_exhausted_flow_ids.discard(id_)
+        self.ongoing_flows.pop(id_, None)
         self.ongoing_tasks.pop(id_, None)
 
         parent_id = self.ongoing_parent_map[id_]
@@ -127,28 +127,28 @@ class InMemoryExecutionState:
             self.ongoing_children_map[parent_id].discard(id_)
             self.dependency_map[parent_id].discard(id_)
             if (
-                parent_id in self.ongoing_exhausted_job_ids
+                parent_id in self.ongoing_exhausted_flow_ids
                 and len(self.dependency_map[parent_id]) == 0
             ):
                 self._update_completed_id(parent_id)
 
-    def _get_batch_from_job(self, job):
-        job_yield = job.get_next_batch()
+    def _get_batch_from_flow(self, flow):
+        flow_yield = flow.get_next_batch()
         result = []
-        if job_yield is None:  # Means the job is exhausted
-            self.ongoing_exhausted_job_ids.add(job.id_)
-            self.dependency_map[job.id_].update(self.ongoing_children_map[job.id_])
-            if len(self.dependency_map[job.id_]) == 0:
-                self._update_completed_id(job.id_)
-        elif isinstance(job_yield, Dependency):
-            self._add_dependency(job.id_, job_yield)
+        if flow_yield is None:  # Means the flows is exhausted
+            self.ongoing_exhausted_flow_ids.add(flow.id_)
+            self.dependency_map[flow.id_].update(self.ongoing_children_map[flow.id_])
+            if len(self.dependency_map[flow.id_]) == 0:
+                self._update_completed_id(flow.id_)
+        elif isinstance(flow_yield, Dependency):
+            self._add_dependency(flow.id_, flow_yield)
         else:
-            for e in job_yield:
+            for e in flow_yield:
                 if e.id_ not in self.completed_ids:
-                    self.ongoing_children_map[job.id_].add(e.id_)
-                    self.ongoing_parent_map[e.id_] = job.id_
-                    if isinstance(e, Job):
-                        self.ongoing_jobs[e.id_] = e
+                    self.ongoing_children_map[flow.id_].add(e.id_)
+                    self.ongoing_parent_map[e.id_] = flow.id_
+                    if isinstance(e, Flow):
+                        self.ongoing_flows[e.id_] = e
                     else:
                         assert isinstance(e, Task), "Typechecking error."
                         result.append(e)

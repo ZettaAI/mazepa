@@ -4,12 +4,13 @@ import pytest
 import docker  # type: ignore
 import boto3  # type: ignore
 from mazepa import SQSExecutionQueue, Task, TaskStatus
+from mazepa.tasks import _TaskFactory
 
 
 def test_push_tasks_exc(mocker):
     mocker.patch("taskqueue.TaskQueue", lambda *args, **kwargs: mocker.MagicMock())
     sqseq = SQSExecutionQueue("q", outcome_queue_name=None)
-    task = Task(lambda: "outcome", {}, id_="task1")
+    task = Task(lambda: "outcome")
     with pytest.raises(RuntimeError):
         sqseq.push_tasks([task])
 
@@ -76,9 +77,9 @@ def test_execution(work_queue, outcome_queue):
         outcome_queue_name=outcome_queue_name,
     )
     tasks = [
-        Task(lambda: "Success"),
-        Task(lambda: "Success"),
-        Task(lambda: exec("raise(Exception(x))")),
+        _TaskFactory(lambda: "Success").make_task(),
+        _TaskFactory(lambda: "Success").make_task(),
+        _TaskFactory(lambda: exec("raise(Exception())")).make_task(),
     ]
     queue.push_tasks(tasks)
     tasks[0]()
@@ -100,7 +101,7 @@ def test_polling_not_done(work_queue, outcome_queue):
         outcome_queue_name=outcome_queue_name,
         pull_lease_sec=1,
     )
-    queue.push_tasks([Task(lambda: "Success")])
+    queue.push_tasks([_TaskFactory(lambda: "Success").make_task()])
     pulled_tasks = queue.pull_tasks()
     time.sleep(1.5)
     pulled_tasks = queue.pull_tasks()
@@ -117,7 +118,7 @@ def test_polling_done(work_queue, outcome_queue):
         outcome_queue_name=outcome_queue_name,
         pull_lease_sec=1,
     )
-    queue.push_tasks([Task(lambda: "Success")])
+    queue.push_tasks([_TaskFactory(lambda: "Success").make_task()])
     pulled_tasks = queue.pull_tasks()
     pulled_tasks[0]()
     pulled_tasks = queue.pull_tasks()

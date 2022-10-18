@@ -26,6 +26,7 @@ requires-python = ">= 3.8"
 dependencies = [
     "attrs >= 21.3",
     "typeguard >= 2.13.3",
+    "coolname >= 1.1.0",
     "task-queue",
     "boto3",
     "zetta_utils",

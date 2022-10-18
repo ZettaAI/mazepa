@@ -4,9 +4,9 @@ from typing import Any
 import pytest
 from mazepa import (
     Dependency,
-    job,
+    flow_type,
     TaskStatus,
-    task_maker,
+    task_factory,
     execute,
     InMemoryExecutionState,
     LocalExecutionQueue,
@@ -22,15 +22,15 @@ def reset_task_count():
     TASK_COUNT = 0
 
 
-@task_maker
+@task_factory
 def dummy_task(return_value: Any) -> Any:
     global TASK_COUNT
     TASK_COUNT += 1
     return return_value
 
 
-@job
-def dummy_job():
+@flow_type
+def dummy_flow():
     task1 = dummy_task.make_task(return_value="output1")
     yield task1
     yield Dependency([task1.id_])
@@ -40,17 +40,17 @@ def dummy_job():
     yield task2
 
 
-@job
-def empty_job():
+@flow_type
+def empty_flow():
     yield []
 
 
 def test_local_execution_defaults(reset_task_count):
     execute(
         [
-            dummy_job(),
-            dummy_job(),
-            dummy_job(),
+            dummy_flow(),
+            dummy_flow(),
+            dummy_flow(),
         ],
         batch_gap_sleep_sec=0,
         max_batch_len=2,
@@ -59,9 +59,9 @@ def test_local_execution_defaults(reset_task_count):
     assert TASK_COUNT == 6
 
 
-def test_local_execution_one_job(reset_task_count):
+def test_local_execution_one_flow(reset_task_count):
     execute(
-        dummy_job(),
+        dummy_flow(),
         batch_gap_sleep_sec=0,
         max_batch_len=1,
     )
@@ -72,9 +72,9 @@ def test_local_execution_state(reset_task_count):
     execute(
         InMemoryExecutionState(
             [
-                dummy_job(),
-                dummy_job(),
-                dummy_job(),
+                dummy_flow(),
+                dummy_flow(),
+                dummy_flow(),
             ]
         ),
         batch_gap_sleep_sec=0,
@@ -88,9 +88,9 @@ def test_local_execution_state_queue(reset_task_count):
     execute(
         InMemoryExecutionState(
             [
-                dummy_job(),
-                dummy_job(),
-                dummy_job(),
+                dummy_flow(),
+                dummy_flow(),
+                dummy_flow(),
             ]
         ),
         exec_queue=LocalExecutionQueue(),
@@ -104,7 +104,7 @@ def test_local_execution_state_queue(reset_task_count):
 def test_local_no_sleep(mocker):
     sleep_m = mocker.patch("time.sleep")
     execute(
-        empty_job(),
+        empty_flow(),
         batch_gap_sleep_sec=10,
         max_batch_len=2,
         purge_at_start=True,
@@ -116,7 +116,7 @@ def test_non_local_sleep(mocker):
     sleep_m = mocker.patch("time.sleep")
     queue_m = mocker.MagicMock(spec=SQSExecutionQueue)
     execute(
-        empty_job(),
+        empty_flow(),
         batch_gap_sleep_sec=10,
         max_batch_len=2,
         purge_at_start=True,

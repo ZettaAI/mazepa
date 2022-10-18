@@ -10,7 +10,7 @@ class TaskExecutionEnv:
     docker_image: Optional[str] = None
 
     def extend(self, other: TaskExecutionEnv):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def apply_defaults(self, other: TaskExecutionEnv):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover

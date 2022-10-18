@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 import pytest
-from mazepa import Job, Task, Dependency, InMemoryExecutionState, TaskStatus, TaskOutcome
+from mazepa import Dependency, InMemoryExecutionState, TaskStatus, TaskOutcome, Flow
+from .maker_utils import make_test_flow, make_test_task
 
 
 def dummy_iter(iterable):
@@ -11,49 +12,46 @@ def dummy_iter(iterable):
 
 
 @pytest.mark.parametrize(
-    "jobs, max_batch_len, expected_batch_ids, completed_task_ids, expected_ongoing_job_ids",
+    "flows, max_batch_len, expected_batch_ids, completed_task_ids, expected_ongoing_flow_ids",
     [
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
                     iterable=[
-                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
+                        make_test_task(
+                            fn=lambda: None,
+                            id_=id_,
+                        )
+                        for id_ in ["a", "b", "c"]
                     ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    id_="flow_0",
                 )
             ],
             10,
             [["a", "b", "c"]],
             [[]],
-            [["job_0"]],
+            [["flow_0"]],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
-                    iterable=[
-                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
-                    ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    iterable=[make_test_task(fn=lambda: None, id_=id_) for id_ in ["a", "b", "c"]],
+                    id_="flow_0",
                 )
             ],
             10,
             [["a", "b", "c"]],
             [["a", "b"]],
-            [["job_0"]],
+            [["flow_0"]],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
-                    iterable=[
-                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
-                    ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    iterable=[make_test_task(fn=lambda: None, id_=id_) for id_ in ["a", "b", "c"]],
+                    id_="flow_0",
                 )
             ],
             10,
@@ -63,161 +61,151 @@ def dummy_iter(iterable):
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
-                    iterable=[
-                        Task(fn=lambda: None, kwargs={}, id_=id_) for id_ in ["a", "b", "c"]
-                    ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    iterable=[make_test_task(fn=lambda: None, id_=id_) for id_ in ["a", "b", "c"]],
+                    id_="flow_0",
                 )
             ],
             1,
             [["a"]],
             [["a"]],
-            [["job_0"]],
+            [["flow_0"]],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
                     iterable=[
-                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        make_test_task(fn=lambda: None, id_="a"),
                         Dependency(),
-                        Task(fn=lambda: None, kwargs={}, id_="b"),
+                        make_test_task(fn=lambda: None, id_="b"),
                     ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    id_="flow_0",
                 )
             ],
             10,
             [["a"], ["b"]],
             [["a"], ["b"]],
-            [["job_0"], []],
+            [["flow_0"], []],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
                     iterable=[
-                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        make_test_task(fn=lambda: None, id_="a"),
                         Dependency(),
-                        Task(fn=lambda: None, kwargs={}, id_="b"),
+                        make_test_task(fn=lambda: None, id_="b"),
                     ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    id_="flow_0",
                 )
             ],
             10,
             [["a"], ["b"], []],
             [["a"], [], ["b"]],
-            [["job_0"], ["job_0"], []],
+            [["flow_0"], ["flow_0"], []],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
                     iterable=[
                         [
-                            Task(fn=lambda: None, kwargs={}, id_="a"),
-                            Task(fn=lambda: None, kwargs={}, id_="b"),
-                            Task(fn=lambda: None, kwargs={}, id_="c"),
+                            make_test_task(fn=lambda: None, id_="a"),
+                            make_test_task(fn=lambda: None, id_="b"),
+                            make_test_task(fn=lambda: None, id_="c"),
                         ],
                         Dependency(["a"]),
                         [
-                            Task(fn=lambda: None, kwargs={}, id_="d"),
+                            make_test_task(fn=lambda: None, id_="d"),
                         ],
                     ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    id_="flow_0",
                 )
             ],
             10,
             [["a", "b", "c"], [], ["d"]],
             [["b"], ["a"], ["c", "d"]],
-            [["job_0"], ["job_0"], []],
+            [["flow_0"], ["flow_0"], []],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
                     iterable=[
                         [
-                            Task(fn=lambda: None, kwargs={}, id_="a"),
-                            Task(fn=lambda: None, kwargs={}, id_="b"),
-                            Task(fn=lambda: None, kwargs={}, id_="c"),
+                            make_test_task(fn=lambda: None, id_="a"),
+                            make_test_task(fn=lambda: None, id_="b"),
+                            make_test_task(fn=lambda: None, id_="c"),
                         ],
                         Dependency(["a"]),
                         [
-                            Task(fn=lambda: None, kwargs={}, id_="d"),
+                            make_test_task(fn=lambda: None, id_="d"),
                         ],
                     ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    id_="flow_0",
                 )
             ],
             10,
             [["a", "b", "c"], [], ["d"]],
             [["b"], ["a"], ["c", "d"]],
-            [["job_0"], ["job_0"], []],
+            [["flow_0"], ["flow_0"], []],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
                     iterable=[
-                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        make_test_task(fn=lambda: None, id_="a"),
                         Dependency(),
-                        Task(fn=lambda: None, kwargs={}, id_="b"),
+                        make_test_task(fn=lambda: None, id_="b"),
                     ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    id_="flow_0",
                 )
             ],
             10,
             [["a"], ["b"], []],
             [["a"], [], ["b"]],
-            [["job_0"], ["job_0"], []],
+            [["flow_0"], ["flow_0"], []],
         ],
         [
             [
-                Job(
+                make_test_flow(
                     fn=dummy_iter,
                     iterable=[
-                        Job(
+                        make_test_flow(
                             fn=dummy_iter,
                             iterable=[
-                                Task(fn=lambda: None, kwargs={}, id_="x"),
-                                Task(fn=lambda: None, kwargs={}, id_="y"),
+                                make_test_task(fn=lambda: None, id_="x"),
+                                make_test_task(fn=lambda: None, id_="y"),
                                 Dependency(["x"]),
-                                Task(fn=lambda: None, kwargs={}, id_="z"),
+                                make_test_task(fn=lambda: None, id_="z"),
                             ],
-                            id_="job_1",
-                            task_execution_env=None,
+                            id_="flow_1",
                         ),
-                        Task(fn=lambda: None, kwargs={}, id_="a"),
+                        make_test_task(fn=lambda: None, id_="a"),
                         Dependency("a"),
-                        Task(fn=lambda: None, kwargs={}, id_="b"),
+                        make_test_task(fn=lambda: None, id_="b"),
                     ],
-                    id_="job_0",
-                    task_execution_env=None,
+                    id_="flow_0",
                 )
             ],
             10,
             [["a"], ["x", "y"], ["b"], ["z"]],
             [[], ["y", "a"], ["x"], ["z"]],
-            [["job_0", "job_1"], ["job_0", "job_1"], ["job_0", "job_1"], ["job_0"]],
+            [["flow_0", "flow_1"], ["flow_0", "flow_1"], ["flow_0", "flow_1"], ["flow_0"]],
         ],
     ],
 )
-def test_job_execution_flow(
-    jobs: list[Job],
+def test_flow_execution_flow(
+    flows: list[Flow],
     max_batch_len: int,
     expected_batch_ids,
     completed_task_ids: list[list[str]],
-    expected_ongoing_job_ids,
+    expected_ongoing_flow_ids,
 ):
-    state = InMemoryExecutionState(ongoing_jobs=jobs)
+    state = InMemoryExecutionState(ongoing_flows=flows)
 
     for i, exp_id in enumerate(expected_batch_ids):  # pylint: disable=consider-using-enumerate
         batch = state.get_task_batch(max_batch_len=max_batch_len)
@@ -227,14 +215,14 @@ def test_job_execution_flow(
             id_: TaskOutcome[Any](status=TaskStatus.SUCCEEDED) for id_ in completed_task_ids[i]
         }
         state.update_with_task_outcomes(task_outcomes)
-        assert state.get_ongoing_job_ids() == expected_ongoing_job_ids[i]
+        assert state.get_ongoing_flow_ids() == expected_ongoing_flow_ids[i]
 
 
 def test_task_outcome_setting():
     # type: () -> None
-    task = Task(fn=lambda: None, kwargs={}, id_="a")
-    jobs = [Job(fn=dummy_iter, iterable=[task], id_="job_0", task_execution_env=None)]
-    state = InMemoryExecutionState(ongoing_jobs=jobs)
+    task = make_test_task(fn=lambda: None, id_="a")
+    flows = [make_test_flow(fn=dummy_iter, iterable=[task], id_="flow_0")]
+    state = InMemoryExecutionState(ongoing_flows=flows)
     state.get_task_batch()
     outcomes = {"a": TaskOutcome(status=TaskStatus.SUCCEEDED, return_value=5566)}
     state.update_with_task_outcomes(outcomes)
@@ -243,9 +231,9 @@ def test_task_outcome_setting():
 
 def test_task_outcome_exc():
     # type: () -> None
-    task = Task(fn=lambda: None, kwargs={}, id_="a")
-    jobs = [Job(fn=dummy_iter, iterable=[task], id_="job_0", task_execution_env=None)]
-    state = InMemoryExecutionState(ongoing_jobs=jobs)
+    task = make_test_task(fn=lambda: None, id_="a")
+    flows = [make_test_flow(fn=dummy_iter, iterable=[task], id_="flow_0")]
+    state = InMemoryExecutionState(ongoing_flows=flows)
     state.get_task_batch()
     outcomes = {"a": TaskOutcome[Any](status=TaskStatus.FAILED)}
     with pytest.raises(Exception):
