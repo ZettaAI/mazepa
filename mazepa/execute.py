@@ -6,7 +6,7 @@ import attrs
 from zetta_utils.log import get_logger
 
 from .execution_queue import ExecutionQueue, LocalExecutionQueue
-from .job import Job
+from .flows import Flow
 from .execution_state import ExecutionState, InMemoryExecutionState
 
 logger = get_logger("mazepa")
@@ -20,7 +20,7 @@ class Executor:  # pragma: no cover # single statement, pure delegation
     max_batch_len: int = 10000
     state_constructor: Callable[..., ExecutionState] = InMemoryExecutionState
 
-    def __call__(self, target: Union[Job, Iterable[Job], ExecutionState]):
+    def __call__(self, target: Union[Flow, Iterable[Flow], ExecutionState]):
         return execute(
             target=target,
             exec_queue=self.exec_queue,
@@ -32,7 +32,7 @@ class Executor:  # pragma: no cover # single statement, pure delegation
 
 
 def execute(
-    target: Union[Job, Iterable[Job], ExecutionState],
+    target: Union[Flow, Iterable[Flow], ExecutionState],
     exec_queue: Optional[ExecutionQueue] = None,
     batch_gap_sleep_sec: float = 4.0,
     purge_at_start: bool = False,
@@ -50,11 +50,11 @@ def execute(
         state = target
         logger.debug(f"Given execution state {state}.")
     else:
-        if not isinstance(target, Job):
-            jobs = target
+        if not isinstance(target, Flow):
+            flows = target
         else:
-            jobs = [target]
-        state = state_constructor(ongoing_jobs=jobs)
+            flows = [target]
+        state = state_constructor(ongoing_flows=flows)
         logger.debug(f"Constructed execution state {state}.")
 
     if exec_queue is None:
@@ -68,8 +68,8 @@ def execute(
 
     logger.debug(f"STARTING: mazepa execution of {target}.")
     while True:
-        if len(state.get_ongoing_job_ids()) == 0:
-            logger.debug("No ongoing jobs left.")
+        if len(state.get_ongoing_flow_ids()) == 0:
+            logger.debug("No ongoing flows left.")
             break
 
         task_batch = state.get_task_batch(max_batch_len=max_batch_len)

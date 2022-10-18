@@ -5,7 +5,7 @@ from typing import Protocol, Iterable, runtime_checkable, Dict, List
 from typeguard import typechecked
 import attrs
 from zetta_utils.log import get_logger
-from .task import Task
+from .tasks import Task
 from .task_outcome import TaskOutcome
 
 logger = get_logger("mazepa")
