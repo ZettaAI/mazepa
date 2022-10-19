@@ -1,29 +1,39 @@
 from __future__ import annotations
-from mazepa import Flow, TaskExecutionEnv, FlowType, flow_type, flow_type_cls
+from mazepa import (
+    Flow,
+    TaskExecutionEnv,
+    FlowType,
+    flow_type,
+    flow_type_cls,
+    FlowFnReturnType,
+    Dependency,
+)
 from mazepa.flows import _Flow, _FlowType
 
 
-def dummy_flow_fn():
-    yield []
+def test_make_flow_type_cls() -> None:
+    @flow_type_cls
+    class DummyFlowCls:
+        x: str = "1"
 
+        def generate(self) -> FlowFnReturnType:
+            yield Dependency(self.x)
 
-class DummyFlowCls:
-    def __call__(self):
-        yield []
-
-
-def test_make_flow_type_cls():
-    cls = flow_type_cls(DummyFlowCls)
-    obj = cls()
+    obj = DummyFlowCls()
+    # reveal_type(obj)
     assert isinstance(obj, FlowType)
     flow = obj()
+    # reveal_type(flow)
     assert isinstance(flow, Flow)
 
 
 def test_make_flow_type():
-    fn = flow_type(dummy_flow_fn)
-    assert isinstance(fn, FlowType)
-    flow = fn()
+    @flow_type
+    def dummy_flow_fn():
+        yield []
+
+    assert isinstance(dummy_flow_fn, FlowType)
+    flow = dummy_flow_fn()
     assert isinstance(flow, Flow)
 
 

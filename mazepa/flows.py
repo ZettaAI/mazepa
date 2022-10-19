@@ -4,6 +4,7 @@ from typing import (
     Callable,
     Generator,
     Union,
+    Type,
     Any,
     Optional,
     List,
@@ -17,7 +18,6 @@ from contextlib import contextmanager
 from typing_extensions import ParamSpec
 import attrs
 from . import id_generators
-from .typing_utils import CallableType
 from .tasks import Task
 from .dependency import Dependency
 from .task_execution_env import TaskExecutionEnv
@@ -140,7 +140,6 @@ class _FlowType(Generic[P]):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> Flow[P]:  # pragma: no cover
-        assert len(args) == 0, "Flows must use keyword arguments only"
         id_ = self.id_fn(self.fn, kwargs)
         result = _Flow[P](
             fn=self.fn,
@@ -156,28 +155,27 @@ def flow_type(fn: Callable[P, FlowFnReturnType]) -> FlowType[P]:
     return _FlowType[P](fn)
 
 
-# def flow_type_cls(
-#    cls: Type[Callable[P1, FlowFnReturnType]] #CallableType[P, P1, FlowFnReturnType],
-# ) -> Type[Callable[P1, FlowType[P1]]]:#CallableType[P, P1, FlowType[P1]]:
+# TODO: make static type checking detect when a class wihtout `generate` is decorated.
+# class FlowGenerator(Protocol):
+# generate: Callable[..., FlowFnReturnType]
+
+# def generate(self, **kwargs) -> FlowFnReturnType: # pylint: disable=no-method-argument
+# def generate(self, *args: P.args, **kwargs: P.kwargs) -> FlowFnReturnType: # pylint: disable=no-method-argument
 
 
-def flow_type_cls(
-    cls: CallableType[P, P1, FlowFnReturnType],
-) -> CallableType[P, P1, FlowType[P1]]:
-    @attrs.mutable(init=False)
-    class FlowTypeCls:
-        """
-        A wrapper that converts all instances of the given class into
-        FlowTypes.
-        Not overriding __new__ here to play nice with static checkers.
-        """
+def flow_type_cls(cls: Type) -> Type:  # rely on mypy plugin to do this properly
+    # original_call = cls.__call__
 
-        _inner_obj: FlowType[P1]
+    # TODO: figure out how to handle this with changing TaskExecutionEnvs
+    def _call_fn(self, *args, **kwargs):
+        return _FlowType(
+            self.generate,
+            # functools.partial(original_call, self),
+            # TODO: Other params passed to decorator
+        )(
+            *args, **kwargs
+        )  # pylint: disable=protected-access
 
-        def __init__(self, *args: P.args, **kwargs: P.kwargs):
-            self._inner_obj = _FlowType[P1](cls(*args, **kwargs))  # type: ignore
-
-        def __call__(self, *args: P1.args, **kwargs: P1.kwargs) -> Flow[P1]:
-            return self._inner_obj(*args, **kwargs)
-
-    return FlowTypeCls
+    # can't override __new__ because it doesn't combine well with attrs/dataclass
+    setattr(cls, "__call__", _call_fn)
+    return cls
