@@ -73,7 +73,7 @@ max-line-length = 99
 good-names = '''ts,df,e,i,j,k,id,logger,n,on,tz,x,y,z,r,ex,ey,cv,s,f,v,fn'''
 
 [tool.pylint.message_control]
-disable = '''duplicate-code,C0330,cyclic-import,too-many-arguments,missing-docstring,too-few-public-methods,logging-fstring-interpolation'''
+disable = '''duplicate-code,C0330,cyclic-import,too-many-arguments,missing-docstring,too-few-public-methods,logging-fstring-interpolation,not-callable,no-member'''
 extension-pkg-allow-list = [
   "pymssql._mssql",
 ]
@@ -101,13 +101,17 @@ norecursedirs = ".env .git .venv build dist"
 python_files = "test.py tests.py test_*.py *_test.py"
 
 [tool.mypy]
-    warn_unreachable = true
-    warn_unused_ignores = true
-    warn_redundant_casts = true
-    warn_unused_configs = true
+exclude=[
+    "mazepa/mypy_plugin.py"
+]
+warn_unreachable = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
 #incremental = false
 #disallow_untyped_defs = true
 #check_untyped_defs = true
 #strict_equality = true
-    implicit_reexport = true
-    no_implicit_optional = true
+implicit_reexport = true
+no_implicit_optional = true
+plugins = "mazepa.mypy_plugin"

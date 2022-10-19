@@ -1,19 +1,16 @@
 from __future__ import annotations
+import attrs
 from mazepa import task_factory, Task, task_factory_cls, TaskFactory
 
 
-def dummy_task_fn():
-    pass
-
-
-class DummyTaskCls:
-    def __call__(self):
-        return "result"
-
-
 def test_make_task_factory_cls() -> None:
-    cls = task_factory_cls(DummyTaskCls)
-    obj = cls()
+    @task_factory_cls
+    @attrs.mutable
+    class DummyTaskCls:
+        def __call__(self) -> str:
+            return "result"
+
+    obj = DummyTaskCls()
     assert isinstance(obj, TaskFactory)
     task = obj.make_task()
     assert isinstance(task, Task)
@@ -22,7 +19,10 @@ def test_make_task_factory_cls() -> None:
 
 
 def test_make_task_factory() -> None:
-    fn = task_factory(dummy_task_fn)
-    assert isinstance(fn, TaskFactory)
-    task = fn.make_task()
+    @task_factory
+    def dummy_task_fn():
+        pass
+
+    assert isinstance(dummy_task_fn, TaskFactory)
+    task = dummy_task_fn.make_task()
     assert isinstance(task, Task)

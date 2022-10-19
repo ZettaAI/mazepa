@@ -9,13 +9,13 @@ from typing import (
     Iterable,
     Dict,
     Protocol,
+    Type,
     runtime_checkable,
 )
 import functools
 from typing_extensions import ParamSpec
 import attrs
 from . import id_generators
-from .typing_utils import CallableType
 from .task_outcome import TaskOutcome, TaskStatus
 from .task_execution_env import TaskExecutionEnv
 
@@ -160,25 +160,16 @@ def task_factory(fn: Callable[P, R_co]) -> TaskFactory[P, R_co]:
 
 
 def task_factory_cls(
-    cls: CallableType[P, P1, R_co],
-) -> CallableType[P, P1, TaskFactory[P1, R_co]]:
-    @attrs.mutable(init=False)
-    class TaskFactoryCls:
-        """
-        A wrapper that converts all instances of the given class into
-        TaskFactories.
-        Not overriding __new__ here to play nice with static checkers.
-        """
+    cls: Type[Callable[P, R_co]],
+) -> Type[Callable[P, R_co]]:
+    def _make_task(self, *args, **kwargs):
+        return _TaskFactory(  # pylint: disable=protected-access
+            self,
+            # TODO: Other params passed to decorator
+        ).make_task(
+            *args, **kwargs
+        )  # pylint: disable=protected-access
 
-        _inner_obj: TaskFactory[P1, R_co]
-
-        def __init__(self, *args: P.args, **kwargs: P.kwargs):
-            self._inner_obj = _TaskFactory[P1, R_co](cls(*args, **kwargs))  # type: ignore
-
-        def __call__(self, *args: P1.args, **kwargs: P1.kwargs) -> R_co:
-            return self._inner_obj(*args, **kwargs)
-
-        def make_task(self, *args: P1.args, **kwargs: P1.kwargs) -> Task[P1, R_co]:
-            return self._inner_obj.make_task(*args, **kwargs)
-
-    return TaskFactoryCls
+    # can't override __new__ because it doesn't combine well with attrs/dataclass
+    setattr(cls, "make_task", _make_task)
+    return cls
