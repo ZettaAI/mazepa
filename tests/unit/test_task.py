@@ -11,7 +11,7 @@ class DummyTaskCls:
         return "result"
 
 
-def test_make_task_factory_cls():
+def test_make_task_factory_cls() -> None:
     cls = task_factory_cls(DummyTaskCls)
     obj = cls()
     assert isinstance(obj, TaskFactory)
@@ -21,7 +21,7 @@ def test_make_task_factory_cls():
     assert outcome == "result"
 
 
-def test_make_task_factory():
+def test_make_task_factory() -> None:
     fn = task_factory(dummy_task_fn)
     assert isinstance(fn, TaskFactory)
     task = fn.make_task()

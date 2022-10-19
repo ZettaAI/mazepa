@@ -156,9 +156,15 @@ def flow_type(fn: Callable[P, FlowFnReturnType]) -> FlowType[P]:
     return _FlowType[P](fn)
 
 
+# def flow_type_cls(
+#    cls: Type[Callable[P1, FlowFnReturnType]] #CallableType[P, P1, FlowFnReturnType],
+# ) -> Type[Callable[P1, FlowType[P1]]]:#CallableType[P, P1, FlowType[P1]]:
+
+
 def flow_type_cls(
     cls: CallableType[P, P1, FlowFnReturnType],
-):
+) -> CallableType[P, P1, FlowType[P1]]:
+    @attrs.mutable(init=False)
     class FlowTypeCls:
         """
         A wrapper that converts all instances of the given class into

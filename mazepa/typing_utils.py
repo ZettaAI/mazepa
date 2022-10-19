@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeVar, Protocol
+from typing import TypeVar, Protocol, Type
 from typing_extensions import ParamSpec
 
 R_co = TypeVar("R_co", covariant=True)
