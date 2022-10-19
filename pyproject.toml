@@ -29,7 +29,7 @@ dependencies = [
     "coolname >= 1.1.0",
     "task-queue",
     "boto3",
-    "zetta_utils",
+    "zetta_utils @ git+ssh://git@github.com/ZettaAI/zetta_utils",
 ]
 dynamic = ["version"]
 
