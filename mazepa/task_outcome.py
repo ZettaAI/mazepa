@@ -11,12 +11,12 @@ class TaskStatus(Enum):
     FAILED = auto()
 
 
-R = TypeVar("R")
+R_co = TypeVar("R_co", covariant=True)
 
 
 @attrs.mutable
-class TaskOutcome(Generic[R]):
+class TaskOutcome(Generic[R_co]):
     status: TaskStatus
     exception: Optional[Exception] = None
     execution_secs: Optional[float] = None
-    return_value: Optional[R] = None
+    return_value: Optional[R_co] = None

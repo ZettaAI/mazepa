@@ -3,14 +3,14 @@ import time
 import pytest
 import docker  # type: ignore
 import boto3  # type: ignore
-from mazepa import SQSExecutionQueue, Task, TaskStatus
-from mazepa.tasks import _TaskFactory
+from mazepa import SQSExecutionQueue, TaskStatus
+from mazepa.tasks import _TaskFactory, _Task
 
 
 def test_push_tasks_exc(mocker):
     mocker.patch("taskqueue.TaskQueue", lambda *args, **kwargs: mocker.MagicMock())
     sqseq = SQSExecutionQueue("q", outcome_queue_name=None)
-    task = Task(lambda: "outcome")
+    task = _Task(lambda: "outcome")
     with pytest.raises(RuntimeError):
         sqseq.push_tasks([task])
 

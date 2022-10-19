@@ -6,7 +6,6 @@ from typing import (
     Callable,
     TypeVar,
     Generic,
-    Optional,
     Iterable,
     Dict,
     Protocol,
@@ -25,8 +24,27 @@ P = ParamSpec("P")
 P1 = ParamSpec("P1")
 
 
+@runtime_checkable
+class Task(Protocol[P, R_co]):  # pragma: no cover # protocol
+    """
+    An executable task.
+    """
+
+    id_: str
+    task_execution_env: TaskExecutionEnv
+
+    _mazepa_callbacks: list[Callable]
+    outcome: TaskOutcome
+
+    def set_up(self, *args: P.args, **kwargs: P.kwargs):
+        ...
+
+    def __call__(self) -> TaskOutcome[R_co]:
+        ...
+
+
 @attrs.mutable
-class Task(Generic[P, R_co]):
+class _Task(Generic[P, R_co]):
     """
     An executable task.
     """
@@ -48,16 +66,16 @@ class Task(Generic[P, R_co]):
     # cache_expiration: datetime.timedelta = None
     # max_retry: # Can use SQS approximateReceiveCount to explicitly fail the task
 
-    # Split into __init__ and _set_up because ParamSpec doesn't allow us
+    # Split into __init__ and set_up because ParamSpec doesn't allow us
     # to play with kwargs.
     # cc: https://peps.python.org/pep-0612/#concatenating-keyword-parameters
-    def _set_up(self, *args: P.args, **kwargs: P.kwargs):
+    def set_up(self, *args: P.args, **kwargs: P.kwargs):
         assert not self.args_are_set
         self.args = args
         self.kwargs = kwargs
         self.args_are_set = True
 
-    def __call__(self) -> TaskOutcome[Optional[R_co]]:
+    def __call__(self) -> TaskOutcome[R_co]:
         assert self.args_are_set
 
         time_start = time.time()
@@ -132,8 +150,8 @@ class _TaskFactory(Generic[P, R_co]):
         **kwargs: P.kwargs,
     ) -> Task[P, R_co]:
         id_ = self.id_fn(self.fn, kwargs)
-        result = Task[P, R_co](fn=self.fn, id_=id_, task_execution_env=self.task_execution_env)
-        result._set_up(*args, **kwargs)  # pylint: disable=protected-access # friend class
+        result = _Task[P, R_co](fn=self.fn, id_=id_, task_execution_env=self.task_execution_env)
+        result.set_up(*args, **kwargs)  # pylint: disable=protected-access # friend class
         return result
 
 
@@ -143,7 +161,8 @@ def task_factory(fn: Callable[P, R_co]) -> TaskFactory[P, R_co]:
 
 def task_factory_cls(
     cls: CallableType[P, P1, R_co],
-):
+) -> CallableType[P, P1, TaskFactory[P1, R_co]]:
+    @attrs.mutable(init=False)
     class TaskFactoryCls:
         """
         A wrapper that converts all instances of the given class into

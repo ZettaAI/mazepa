@@ -1,7 +1,8 @@
 from __future__ import annotations
 import time
 import pytest
-from mazepa import ExecutionMultiQueue, Task, TaskExecutionEnv
+from mazepa import ExecutionMultiQueue, TaskExecutionEnv
+from mazepa.tasks import _Task
 from .maker_utils import make_test_task
 
 
@@ -50,7 +51,7 @@ def test_push_tasks_exc(mocker):
     queue_a.name = "a"
     queue_b.name = "b"
     meq = ExecutionMultiQueue([queue_a, queue_b])
-    task_c = Task(lambda: None, "dummy", task_execution_env=TaskExecutionEnv(tags=["c"]))
+    task_c = _Task(lambda: None, "dummy", task_execution_env=TaskExecutionEnv(tags=["c"]))
     with pytest.raises(RuntimeError):
         meq.push_tasks([task_c])
 
